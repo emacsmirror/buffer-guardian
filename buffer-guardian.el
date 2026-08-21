@@ -395,6 +395,8 @@ are visible."
 
 (defvar inhibit-interaction)
 
+(defvar buffer-guardian--save-buffer-maybe-func-save-non-empty nil)
+
 ;;; Internal functions
 
 (defmacro buffer-guardian--message (format-string &rest args)
@@ -468,7 +470,8 @@ specialized symbols for \='org-src and \='edit-indirect buffers.
 
 Returns: \='org-src, \='edit-indirect, t, or nil."
   (let ((file-name (buffer-guardian--real-file-name (buffer-base-buffer))))
-    (when (and (buffer-modified-p)
+    (when (and (or (buffer-modified-p)
+                   buffer-guardian--save-buffer-maybe-func-save-non-empty)
                (not (buffer-guardian--exclude-regexps-p file-name))
                (or (not buffer-guardian-max-buffer-size)
                    (< buffer-guardian-max-buffer-size 0)
@@ -521,6 +524,19 @@ Returns: \='org-src, \='edit-indirect, t, or nil."
                    "exist.")
            file-name)
           ;; Return nil
+          nil)
+
+         ;; Verify forced save conditions for unmodified empty buffers
+         ((and (not (buffer-modified-p))
+               ;; Allow saving unmodified buffers only when explicitly invoked
+               ;; via `buffer-guardian-save-buffer' for a newly visited file
+               ;; that does not yet exist on disk and has a size of 0. This
+               ;; ensures empty files are properly created on disk when the user
+               ;; manually requests a save, without artificially altering the
+               ;; buffer's modified state.
+               (not (and buffer-guardian--save-buffer-maybe-func-save-non-empty
+                         (= (buffer-size) 0)
+                         (not (file-exists-p file-name)))))
           nil)
 
          ;; Passed all checks
@@ -679,7 +695,8 @@ If declined, the save is safely aborted."
                       (buffer-file-name real-buffer)))
          (buffer-guardian--inhibit-interaction nil)
          (buffer-guardian--ignore-modified-externally t)
-         (buffer-guardian-inhibit-saving-nonexistent-files nil))
+         (buffer-guardian-inhibit-saving-nonexistent-files nil)
+         (buffer-guardian--save-buffer-maybe-func-save-non-empty t))
     (when (buffer-live-p target-buffer)
       (with-current-buffer target-buffer
         (when (and file-name
