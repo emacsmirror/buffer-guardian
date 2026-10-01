@@ -4,7 +4,7 @@
 ;; URL: https://github.com/jamescherti/jc-dev
 ;; Package-Requires: ((emacs "27.1"))
 ;; Keywords: convenience, files
-;; Version: 1.0.1
+;; Version: 1.0.2
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; This file is free software; you can redistribute it and/or modify
