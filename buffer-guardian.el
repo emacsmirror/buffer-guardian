@@ -384,16 +384,11 @@ are visible."
 
 ;;; Internal variables
 
-(defvar buffer-guardian--inhibit-interaction t
-  "Internal variable to override `inhibit-interaction' behavior down stack.")
-
 (defvar buffer-guardian--ignore-modified-externally nil
   "Internal variable to allow manual commands to ignore disk checks safely.")
 
 (defvar buffer-guardian--debounce-timer nil
   "Internal timer used to debounce save operations.")
-
-(defvar inhibit-interaction)
 
 (defvar buffer-guardian--save-buffer-maybe-func-save-non-empty nil)
 
@@ -693,7 +688,6 @@ If declined, the save is safely aborted."
          (real-buffer (buffer-guardian--real-file-buffer target-buffer))
          (file-name (when (buffer-live-p real-buffer)
                       (buffer-file-name real-buffer)))
-         (buffer-guardian--inhibit-interaction nil)
          (buffer-guardian--ignore-modified-externally t)
          (buffer-guardian-inhibit-saving-nonexistent-files nil)
          (buffer-guardian--save-buffer-maybe-func-save-non-empty t))
@@ -726,8 +720,7 @@ By default, it only saves when the file exists on the disk."
   (let ((target-buffer (or buffer (current-buffer))))
     (when (buffer-live-p target-buffer)
       (with-current-buffer target-buffer
-        (let ((save-silently (not buffer-guardian-verbose))
-              (inhibit-interaction buffer-guardian--inhibit-interaction))
+        (let ((save-silently (not buffer-guardian-verbose)))
           (condition-case err
               (let ((predicate-result (buffer-guardian--predicate t)))
                 (when predicate-result
@@ -795,15 +788,6 @@ By default, it only saves when the file exists on the disk."
                         (buffer-guardian--message
                          "[buffer-guardian] Save: '%s'" file-name)
                         (run-hooks 'buffer-guardian-after-save-hook))))))))
-            (inhibited-interaction
-             (run-hooks 'buffer-guardian-save-error-hook)
-             (message
-              (concat
-               "[buffer-guardian] Error: 'save-buffer' attempted an "
-               "interactive prompt in buffer '%s'. It is expected to "
-               "be non-interactive. Please report this "
-               "issue to the `buffer-guardian' author.")
-              (buffer-name)))
             (error
              (run-hooks 'buffer-guardian-save-error-hook)
              (buffer-guardian--message
